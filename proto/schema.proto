@@ -1,0 +1,94 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+package distributed_cfg_service_mk;
+
+option go_package = "./;proto";
+
+
+service DistributedCfgServiceMK {
+    // config basic CRUD calls
+    rpc CreateConfig(Config) returns (Timestamp);
+    rpc UpdateConfig(Config) returns (Timestamp);
+    rpc GetConfig(Service) returns (Config);
+    rpc DeleteConfig(Service) returns (Timestamp);
+    
+    // config version history related calls:
+    rpc GetArchivedConfig(Timestamp) returns (ConfigByTimestamp);
+    rpc ListConfigTimestamps(Service) returns (TimestampList);
+    
+    // config blocking for deletion by subscribed apps related calls:
+    rpc SubscribeClientApp(SubscriptionRequest) returns (google.protobuf.Empty);
+    rpc UnSubscribeClientApp(SubscriptionRequest) returns (google.protobuf.Empty);
+    rpc ListConfigSubscribers(Service) returns (ConfigSubscribers);
+
+}
+
+message Config {
+    string service = 1;
+    repeated Parameter parameters = 2;
+}
+
+message Parameter {
+    string key = 1;
+    string value = 2;
+}
+
+message Service {
+    string name = 1;
+}
+
+message Timestamp {
+    string service = 1;
+    google.protobuf.Timestamp timestamp = 2;
+}
+
+message TimestampList {
+    string service = 1;
+    repeated google.protobuf.Timestamp timestamps = 2;
+}
+
+message ConfigByTimestamp {
+    string service = 1;
+    google.protobuf.Timestamp timestamp = 2;
+    repeated Parameter parameters = 3;
+}
+
+message SubscriptionRequest {
+    string service = 1;
+    string client_app = 2;
+}
+
+message ConfigSubscribers {
+    string service = 1;
+    repeated string client_app = 2;
+}
+
+
+
+
+
+
+// service DistributedConfigAppMK {
+//     rpc CreateNewConfig(NewConfig) returns (CreatedConfigName);
+// }
+
+// message NewConfig   {
+//     string name = 1;
+//     repeated ConfigItem items = 2;
+// }
+
+ 
+// message CreatedConfigName {
+
+// }
+
+// message SongServerRequest {
+//     optional string song_name = 1;
+//   }
+
+
+
+
