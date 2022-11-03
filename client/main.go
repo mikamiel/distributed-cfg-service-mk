@@ -47,7 +47,6 @@ func main() {
 	// }
 
 	// // st2 := status.Convert(err)
-	// // st3 := status.
 
 	// if err != nil {
 	// 	log.Println(st)
