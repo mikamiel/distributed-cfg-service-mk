@@ -22,7 +22,6 @@ import (
 )
 
 // Stuct for storing config record in DB
-// ???maybe add uniquie index by service_plus_timestamp???
 type Config struct {
 	gorm.Model
 	Service    string
@@ -84,7 +83,6 @@ func getDefaultEnvVars() map[string]string {
 
 // Update default environment variables with actual ones
 func updateDefaultEnvVarsWithActual() map[string]string {
-
 	envVars := getDefaultEnvVars()
 	for key, _ := range envVars {
 		envVar := os.Getenv(key)
@@ -106,7 +104,6 @@ func resolveHostNameToIp(hostname string) string {
 		log.Fatal(err)
 	}
 	return ips[0].String()
-
 }
 
 // Func to ensure that no duplicate key names sent by client in single request
@@ -122,7 +119,6 @@ func TestForDuplicatesInParams(request *pb.Config) []string {
 		}
 	}
 	return duplicates
-
 }
 
 // CreateConfig() gRPC handler
@@ -388,9 +384,10 @@ func main() {
 	envVars := updateDefaultEnvVarsWithActual()
 
 	// resolve db host name to ip address manually
-	envVars["DB_HOST_NAME"] = resolveHostNameToIp(envVars["DB_HOST_NAME"])
-	// to delete - DEBUG!!:
-	log.Printf("DB_HOST_NAME resolved to ip address: %s", envVars["DB_HOST_NAME"])
+	dbIP := resolveHostNameToIp(envVars["DB_HOST_NAME"])
+	//Debuging info:
+	log.Printf("DB_HOST_NAME: %s resolved to ip address: %s", envVars["DB_HOST_NAME"], dbIP)
+	envVars["DB_HOST_NAME"] = dbIP
 
 	//construct db data source string from environment variables
 	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s TimeZone=%s",
@@ -413,7 +410,6 @@ func main() {
 	// Init and start gRPC service
 	srv := grpc.NewServer()
 	pb.RegisterDistributedCfgServiceMKServer(srv, &GrpcDistributedConfigServer{db: gormDBconn})
-
 	log.Printf("Starting gRPC distributed config service at port %s ...", addr)
 	if err := srv.Serve(conn); err != nil {
 		log.Fatalf("Failed to serve: %v", err)

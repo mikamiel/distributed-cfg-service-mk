@@ -12,7 +12,7 @@ import (
 
 func main() {
 
-	// Some simpe testing here:
+	// Some simple testing here:
 
 	conn, err := grpc.Dial("localhost:50051", grpc.WithInsecure())
 	if err != nil {
@@ -86,89 +86,6 @@ func main() {
 		fmt.Println("Deleted config ", resp5.Service, " at ", resp5.Timestamp.AsTime())
 	}
 
-	// GOOD UpdateConfig
-	// resp, err := c.UpdateConfig(context.Background(), &pb.Config{Service: service, Parameters: params})
-	// if err != nil {
-	// 	fmt.Println(err)
-	// } else {
-	// 	fmt.Println(resp.Service)
-	// 	fmt.Println(resp.Timestamp.AsTime())
-	// }
-
-	// // fmt.Println(resp.Service)
-	// // fmt.Println(resp.Parameters)
-
-	// resp, err := c.ListConfigTimestamps(
-	// 	// resp, err := c.UpdateConfig(
-
-	// 	context.Background(),
-	// 	&pb.Service{Name: service},
-	// 	// &pb.ConfigTimestamp{Service: service, Timestamp: nil},
-	// 	// &pb.Config{Service: service, Parameters: params},
-
-	// )
-
-	// st, ok := status.FromError(err)
-	// if !ok {
-	// 	log.Println("Error was not a status error")
-	// }
-
-	// // st2 := status.Convert(err)
-
-	// if err != nil {
-	// 	log.Println(st)
-	// } else {
-	// 	// log.Println(st2.Details()...)
-	// 	// log.Println(st2.Message())
-	// 	// fmt.Println(resp.GetService(), resp.GetTimestamp())
-	// 	fmt.Println(resp.GetService())
-	// 	fmt.Println(resp.GetTimestamps())
-	// }
-
-	// resp2, err := c.GetConfig(
-	// 	// resp, err := c.UpdateConfig(
-
-	// 	context.Background(),
-	// 	&pb.Service{Name: service},
-	// 	// &pb.ConfigTimestamp{Service: service, Timestamp: nil},
-	// 	// &pb.Config{Service: service, Parameters: params},
-
-	// )
-	// fmt.Println(resp2.GetService())
-	// fmt.Println(resp2.GetParameters())
-
-	// resp3, err := c.GetArchivedConfig(
-	// 	// resp, err := c.UpdateConfig(
-
-	// 	context.Background(),
-	// 	&pb.Timestamp{Service: "PostGres11",
-	// 		Timestamp: resp.GetTimestamps()[1],
-	// 	},
-	// 	// &pb.ConfigTimestamp{Service: service, Timestamp: nil},
-	// 	// &pb.Config{Service: service, Parameters: params},
-
-	// )
-	// if err != nil {
-	// 	fmt.Println(err)
-	// 	fmt.Println(resp3.GetService())
-	// 	fmt.Println(resp3.GetTimestamp())
-	// 	fmt.Println(resp3.GetParameters())
-	// } else {
-	// }
-
-	// GOOD:
-	// resp, err := c.DeleteConfig(
-
-	// 	context.Background(),
-	// 	&pb.Service{Name: service},
-	// )
-	// if err != nil {
-	// 	fmt.Println(err)
-	// } else {
-	// 	fmt.Println(resp, resp.Timestamp.AsTime())
-	// }
-
-	// GOOD:
 	// clientApp := "client app 1"
 	// resp, err := c.SubscribeClientApp(
 	// 	context.Background(),
@@ -203,22 +120,4 @@ func main() {
 	// 	fmt.Println(resp)
 	// }
 
-	//GOOD
-	// _ = params
-	// resp, err := c.GetConfig(
-	// 	context.Background(),
-	// 	&pb.Service{Name: service},
-	// )
-	// if err != nil {
-	// 	fmt.Println(err)
-	// } else {
-	// 	fmt.Println(resp.Parameters)
-	// }
-
-	// fmt.Println(resp.Service)
-	// fmt.Println(resp.Parameters)
-	// {Key: "Tcp port", Value: "33334"},
-	// {Key: "Memory limit", Value: "4gb"},
-	// {Key: "Root dir", Value: "/my_root/"},
-	// {Key: "TTL", Value: "222"},
 }
