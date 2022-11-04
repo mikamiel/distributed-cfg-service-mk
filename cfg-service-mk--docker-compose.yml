@@ -1,0 +1,46 @@
+# default postgresql  db/user/pass = postgres/postgres/postgres
+version: '3.1'
+
+services:
+
+  postgres-db:
+    image: postgres
+    restart: always
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - postgresql-data:/var/lib/postgresql/data
+    networks:
+      - my-net
+
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - 8080:8080
+    networks:
+      - my-net
+
+  cfg-service-mk:
+    image: cfg-service-mk:0.93
+    restart: always
+    environment:
+      - DB_PASSWORD=postgres
+      - DB_HOST_NAME=postgres-db
+      - CFG_SERVICE_PORT=50051
+    ports:
+      - 50051:50051
+    depends_on:
+      - postgres-db
+    networks:
+      - my-net
+
+networks:
+  my-net:
+    driver: bridge
+
+volumes:
+  postgresql-data:
+    driver: local

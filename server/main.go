@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
 	"time"
 
 	pb "distributed-cfg-service-mk/proto"
@@ -48,9 +49,6 @@ type GrpcDistributedConfigServer struct {
 	pb.UnimplementedDistributedCfgServiceMKServer
 }
 
-var dsn = "host=localhost user=super password=super dbname=test port=5432 sslmode=disable TimeZone=Asia/Yekaterinburg"
-var port int
-
 // Main SQL query for retrieving filtered/merged config.
 // !Warning: Postgre-specific raw SQL - probably won't work in MySQL or SQLite
 const SqlGetKeyValsByTimestamp = `
@@ -66,6 +64,50 @@ const SqlGetKeyValsByTimestamp = `
 				) AS sub_query
 			WHERE value != ''
 `
+
+// Default environment variables
+func getDefaultEnvVars() map[string]string {
+	return map[string]string{
+		//Postgres:
+		"DB_HOST_NAME": "localhost",
+		"DB_PORT":      "5432",
+		"DB_USER":      "postgres",
+		"DB_PASSWORD":  "postgres",
+		"DB_NAME":      "postgres",
+		"DB_SSLMODE":   "disable",
+		"DB_TIMEZONE":  "Asia/Yekaterinburg",
+
+		//Service listening port:
+		"CFG_SERVICE_PORT": "50051",
+	}
+}
+
+// Update default environment variables with actual ones
+func updateDefaultEnvVarsWithActual() map[string]string {
+
+	envVars := getDefaultEnvVars()
+	for key, _ := range envVars {
+		envVar := os.Getenv(key)
+		if envVar == "" {
+			continue
+		} else {
+			envVars[key] = envVar
+		}
+	}
+	return envVars
+}
+
+// For some reason GORM db driver fails to resolve hostname of a DB inside docker container network,
+// so resolve it manually as a workaround
+func resolveHostNameToIp(hostname string) string {
+	ips, err := net.LookupIP(hostname)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to resolve ip-address for host: %s   %v\n", hostname, err)
+		log.Fatal(err)
+	}
+	return ips[0].String()
+
+}
 
 // Func to ensure that no duplicate key names sent by client in single request
 func TestForDuplicatesInParams(request *pb.Config) []string {
@@ -234,6 +276,7 @@ func (srv *GrpcDistributedConfigServer) ListConfigTimestamps(ctx context.Context
 
 }
 
+// SubscribeClientApp() gRPC handler
 func (srv *GrpcDistributedConfigServer) SubscribeClientApp(ctx context.Context, subscriptionRequest *pb.SubscriptionRequest) (*emptypb.Empty, error) {
 	result := srv.db.Limit(1).Where("service = ?", subscriptionRequest.Service).Find(&Config{})
 	if !(result.RowsAffected > 0) {
@@ -262,6 +305,7 @@ func (srv *GrpcDistributedConfigServer) SubscribeClientApp(ctx context.Context, 
 
 }
 
+// UnSubscribeClientApp() gRPC handler
 func (srv *GrpcDistributedConfigServer) UnSubscribeClientApp(ctx context.Context, subscriptionRequest *pb.SubscriptionRequest) (*emptypb.Empty, error) {
 	result := srv.db.Limit(1).Where("service = ?", subscriptionRequest.Service).Find(&Config{})
 	if !(result.RowsAffected > 0) {
@@ -287,6 +331,7 @@ func (srv *GrpcDistributedConfigServer) UnSubscribeClientApp(ctx context.Context
 
 }
 
+// ListConfigSubscribers() gRPC handler
 func (srv *GrpcDistributedConfigServer) ListConfigSubscribers(ctx context.Context, requestedService *pb.Service) (*pb.ConfigSubscribers, error) {
 	result := srv.db.Limit(1).Where("service = ?", requestedService.Name).Find(&Config{})
 	if !(result.RowsAffected > 0) {
@@ -310,6 +355,7 @@ func (srv *GrpcDistributedConfigServer) ListConfigSubscribers(ctx context.Contex
 
 }
 
+// DeleteConfig() gRPC handler
 func (srv *GrpcDistributedConfigServer) DeleteConfig(ctx context.Context, requestedService *pb.Service) (*pb.Timestamp, error) {
 	result := srv.db.Limit(1).Where("service = ?", requestedService.Name).Find(&Config{})
 	if !(result.RowsAffected > 0) {
@@ -338,6 +384,18 @@ func (srv *GrpcDistributedConfigServer) DeleteConfig(ctx context.Context, reques
 }
 
 func main() {
+
+	envVars := updateDefaultEnvVarsWithActual()
+
+	// resolve db host name to ip address manually
+	envVars["DB_HOST_NAME"] = resolveHostNameToIp(envVars["DB_HOST_NAME"])
+	// to delete - DEBUG!!:
+	log.Printf("DB_HOST_NAME resolved to ip address: %s", envVars["DB_HOST_NAME"])
+
+	//construct db data source string from environment variables
+	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s TimeZone=%s",
+		envVars["DB_HOST_NAME"], envVars["DB_PORT"], envVars["DB_USER"], envVars["DB_PASSWORD"], envVars["DB_NAME"], envVars["DB_SSLMODE"], envVars["DB_TIMEZONE"])
+
 	// Connect to DB and migrate the schema
 	gormDBconn, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
@@ -346,8 +404,7 @@ func main() {
 	gormDBconn.AutoMigrate(&Config{}, &Parameter{}, Subscriber{})
 
 	// Open listening port
-	port = 50051
-	addr := fmt.Sprintf(":%d", port)
+	addr := fmt.Sprintf(":%s", envVars["CFG_SERVICE_PORT"])
 	conn, err := net.Listen("tcp", addr)
 	if err != nil {
 		log.Fatalf("Cannot listen on port %s", addr)
@@ -356,6 +413,8 @@ func main() {
 	// Init and start gRPC service
 	srv := grpc.NewServer()
 	pb.RegisterDistributedCfgServiceMKServer(srv, &GrpcDistributedConfigServer{db: gormDBconn})
+
+	log.Printf("Starting gRPC distributed config service at port %s ...", addr)
 	if err := srv.Serve(conn); err != nil {
 		log.Fatalf("Failed to serve: %v", err)
 	}
