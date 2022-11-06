@@ -24,7 +24,7 @@ services:
       - my-net
 
   cfg-service-mk:
-    image: mikamiel/distributed-cfg-service-mk:0.93
+    image: mikamiel/distributed-cfg-service-mk:0.994-multistage
     restart: always
     environment:
       - DB_PASSWORD=postgres

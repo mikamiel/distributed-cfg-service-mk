@@ -21,7 +21,9 @@ func main() {
 	defer conn.Close()
 	c := pb.NewDistributedCfgServiceMKClient(conn)
 
-	service := "Test service 1"
+	service := "Service number one"
+	clientApp := "Client app one"
+	// clientApp2 := "Client app 2"
 
 	params := []*pb.Parameter{
 		{Key: "Tcp port", Value: "80"},
@@ -33,8 +35,7 @@ func main() {
 	if err != nil {
 		fmt.Println(err)
 	} else {
-		fmt.Println(resp.Service)
-		fmt.Println(resp.Timestamp.AsTime())
+		fmt.Println("Config for service", resp.Service, " was successfully created at ", resp.Timestamp.AsTime())
 	}
 
 	resp2, err := c.GetConfig(
@@ -61,8 +62,7 @@ func main() {
 	if err != nil {
 		fmt.Println(err)
 	} else {
-		fmt.Println(resp3.Service)
-		fmt.Println(resp3.Timestamp.AsTime())
+		fmt.Println("Config for service", resp3.Service, " was successfully updated at ", resp3.Timestamp.AsTime())
 	}
 
 	resp4, err := c.GetConfig(
@@ -76,48 +76,80 @@ func main() {
 		fmt.Println(resp4.Parameters)
 	}
 
-	resp5, err := c.DeleteConfig(
+	configTSlist, err := c.ListConfigTimestamps(
 		context.Background(),
 		&pb.Service{Name: service},
 	)
 	if err != nil {
 		fmt.Println(err)
 	} else {
-		fmt.Println("Deleted config ", resp5.Service, " at ", resp5.Timestamp.AsTime())
+		fmt.Println("Available timestamps for config ", configTSlist.Service, ": ")
+		for _, timstmp := range configTSlist.Timestamps {
+
+			fmt.Println(timstmp.AsTime())
+		}
 	}
 
-	// clientApp := "client app 1"
-	// resp, err := c.SubscribeClientApp(
-	// 	context.Background(),
-	// 	&pb.SubscriptionRequest{Service: service, ClientApp: clientApp},
-	// )
-	// if err != nil {
-	// 	fmt.Println(err)
-	// } else {
-	// 	fmt.Println(resp)
-	// }
+	resp5, err := c.GetArchivedConfig(
+		context.Background(),
+		&pb.Timestamp{Service: service,
+			Timestamp: configTSlist.Timestamps[0],
+		})
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Println(resp5.Service, " ", resp5.Timestamp.AsTime())
+		fmt.Println(resp5.Parameters)
+	}
 
-	// GOOD:
-	// clientApp := "client app 1"
-	// resp, err := c.UnSubscribeClientApp(
-	// 	context.Background(),
-	// 	&pb.SubscriptionRequest{Service: service, ClientApp: clientApp},
-	// )
-	// if err != nil {
-	// 	fmt.Println(err)
-	// } else {
-	// 	fmt.Println(resp)
-	// }
+	resp6, err := c.SubscribeClientApp(
+		context.Background(),
+		&pb.SubscriptionRequest{Service: service, ClientApp: clientApp},
+	)
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Println("Client app ", clientApp, "was successfully subscribed to config ", service, resp6)
+	}
 
-	// GOOD:
-	// resp, err := c.ListConfigSubscribers(
-	// 	context.Background(),
-	// 	&pb.Service{Name: service},
-	// )
-	// if err != nil {
-	// 	fmt.Println(err)
-	// } else {
-	// 	fmt.Println(resp)
-	// }
+	resp7, err := c.DeleteConfig(
+		context.Background(),
+		&pb.Service{Name: service},
+	)
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Println("Deleted config ", resp7.Service, " at ", resp7.Timestamp.AsTime())
+	}
+
+	resp8, err := c.ListConfigSubscribers(
+		context.Background(),
+		&pb.Service{Name: service},
+	)
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Println("Config subscribers list:", resp8)
+	}
+
+	resp9, err := c.UnSubscribeClientApp(
+		context.Background(),
+		&pb.SubscriptionRequest{Service: service, ClientApp: clientApp},
+	)
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Println("Client app ", clientApp, "was successfully UnSubscribed from config ", service, resp9)
+	}
+
+	resp10, err := c.DeleteConfig(
+		context.Background(),
+		&pb.Service{Name: service},
+	)
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Println("Deleted config ", resp10.Service, " at ", resp10.Timestamp.AsTime())
+	}
 
 }

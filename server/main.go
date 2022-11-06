@@ -28,7 +28,8 @@ type Config struct {
 	Parameters []Parameter
 }
 
-// Stuct for storing key/value config pair in DB
+// Stuct for storing key/value config pair in DB,
+// tagging with 'uniqueIndex' fields that compose *multicolumn* unique index
 type Parameter struct {
 	gorm.Model
 	Key      string `gorm:"uniqueIndex:key_plus_configid"`
@@ -36,7 +37,8 @@ type Parameter struct {
 	ConfigID uint `gorm:"uniqueIndex:key_plus_configid"`
 }
 
-// Stuct for storing config subscriber (client app) in DB
+// Stuct for storing config subscriber (client app) in DB,
+// tagging with 'uniqueIndex' fields that compose *multicolumn* unique index
 type Subscriber struct {
 	gorm.Model
 	ClientApp string `gorm:"uniqueIndex:clientapp_plus_service"`
@@ -106,7 +108,7 @@ func resolveHostNameToIp(hostname string) string {
 	return ips[0].String()
 }
 
-// Func to ensure that no duplicate key names sent by client in single request
+// Func to ensure that no duplicate key names sent by client in a single request
 func TestForDuplicatesInParams(request *pb.Config) []string {
 	testKeysForDuplicates := map[string]int{}
 	duplicates := []string{}
@@ -147,13 +149,15 @@ func (srv *GrpcDistributedConfigServer) CreateConfig(ctx context.Context, reques
 	if result := srv.db.Create(&configToCreate); result.Error != nil {
 		log.Println(result.Error)
 		return nil, status.Errorf(codes.Internal,
-			"Unable to create config for ", request.Service)
+			"Unable to create config for %s", request.Service)
 	}
 	srv.db.First(&configToCreate, configToCreate.ID)
 	timestamp := configToCreate.UpdatedAt
 
-	return &pb.Timestamp{Service: fmt.Sprintf("Hey, %v!", request.Service),
-			Timestamp: timestamppb.New(timestamp)},
+	return &pb.Timestamp{
+			Service:   fmt.Sprintf(request.Service),
+			Timestamp: timestamppb.New(timestamp),
+		},
 		status.Errorf(codes.OK,
 			"Config for service \"%s\" created succesfully at timestamp %s", request.Service, timestamp.String())
 }
@@ -188,8 +192,10 @@ func (srv *GrpcDistributedConfigServer) UpdateConfig(ctx context.Context, reques
 	}
 	srv.db.First(&configToCreate, configToCreate.ID)
 	timestamp := configToCreate.UpdatedAt
-	return &pb.Timestamp{Service: request.GetService(),
-			Timestamp: timestamppb.New(timestamp)},
+	return &pb.Timestamp{
+			Service:   request.Service,
+			Timestamp: timestamppb.New(timestamp),
+		},
 		status.Errorf(codes.OK,
 			"Config for service \"%s\" updated succesfully at timestamp %s", request.Service, timestamp.String())
 }
@@ -231,14 +237,14 @@ func (srv *GrpcDistributedConfigServer) GetArchivedConfig(ctx context.Context, r
 			"No config for service \"%s\" found, use CreateConfig() to create it from scratch", requestedVersion.Service)
 	}
 
+	// !!!!!! FOR SOME REASON NOT WORKING, NEEDS DEBUGGING, PROBABLY SMTH WITH TIMEZONES !!!!!
 	// Check if config with NAME AND TIMESTAMP provided by client exists in DB:
-	// config = nil
-	result = srv.db.Limit(1).Where("service = ? AND updated_at = ?", requestedVersion.Service, requestedVersion.Timestamp.AsTime()).Find(&config)
-	if !(result.RowsAffected > 0) {
-		return nil, status.Errorf(codes.NotFound,
-			"Config for service \"%s\" exists, but no version with provided timestamp \"%s\" found. Use ListConfigTimestamps() to list available timestamps.",
-			requestedVersion.Service, requestedVersion.Timestamp.AsTime().String())
-	}
+	// result = srv.db.Limit(1).Where("service = ? AND updated_at = ?", requestedVersion.Service, requestedVersion.Timestamp.AsTime()).Find(&config)
+	// if !(result.RowsAffected > 0) {
+	// 	return nil, status.Errorf(codes.NotFound,
+	// 		"Config for service \"%s\" exists, but no version with provided timestamp \"%s\" found. Use ListConfigTimestamps() to list available timestamps.",
+	// 		requestedVersion.Service, requestedVersion.Timestamp.AsTime().String())
+	// }
 
 	srv.db.Raw(SqlGetKeyValsByTimestamp, requestedVersion.Service, requestedVersion.Timestamp.AsTime()).Scan(&paramsGrpc)
 	configToSendBack.Service = requestedVersion.Service
@@ -256,7 +262,7 @@ func (srv *GrpcDistributedConfigServer) ListConfigTimestamps(ctx context.Context
 	}
 	var timestamps []time.Time
 
-	result := srv.db.Table("configs").Select("updated_at").Where("service = ?", requestedService.Name).Order("updated_at DESC").Scan(&timestamps)
+	result := srv.db.Table("configs").Select("updated_at").Where("service = ? AND deleted_at IS NULL", requestedService.Name).Order("updated_at DESC").Scan(&timestamps)
 	// Check if config with NAME provided by client exists in DB:
 	if !(result.RowsAffected > 0) {
 		return nil, status.Errorf(codes.NotFound,
