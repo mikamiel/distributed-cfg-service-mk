@@ -69,26 +69,3 @@ message ConfigSubscribers {
 
 
 
-
-
-// service DistributedConfigAppMK {
-//     rpc CreateNewConfig(NewConfig) returns (CreatedConfigName);
-// }
-
-// message NewConfig   {
-//     string name = 1;
-//     repeated ConfigItem items = 2;
-// }
-
- 
-// message CreatedConfigName {
-
-// }
-
-// message SongServerRequest {
-//     optional string song_name = 1;
-//   }
-
-
-
-
