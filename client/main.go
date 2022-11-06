@@ -12,7 +12,7 @@ import (
 
 func main() {
 
-	// Some simple testing here:
+	// Some naive testing here:
 
 	conn, err := grpc.Dial("localhost:50051", grpc.WithInsecure())
 	if err != nil {

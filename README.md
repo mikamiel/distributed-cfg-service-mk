@@ -1,20 +1,20 @@
-# Сервис хранения конфигураций приложений (тестовое задание №2 - Distributed config).
+# Сервис хранения конфигураций приложений (тестовое задание №2 - Distributed config)
 
 Сервис реализован на Go.
 Общение клиентов с сервисом происходит по протоколу gRPC посредством protobuf-месаджей.
 Доступны следующие gRPC - вызовы:
 
- _стандартные CRUD операции c конфигом:_
+ _Стандартные CRUD операции c конфигом:_
 * `CreateConfig(Config)`
 * `GetConfig(Service)`
 * `UpdateConfig(Config)`
 * `DeleteConfig(Service)`
 
- _доступ к архивным версиям конфига:_
+ _Доступ к архивным версиям конфига:_
 * `GetArchivedConfig(Timestamp)`
 * `ListConfigTimestamps(Service)`
 
- _управление подпиской клиентов на конфигурации (с целью запрета удаления конфигов на которые имеются подписки):_
+ _Управление подпиской клиентов на конфигурации (с целью запрета удаления конфигов на которые имеются подписки):_
 * `SubscribeClientApp(SubscriptionRequest)`
 * `UnSubscribeClientApp(SubscriptionRequest)`
 * `ListConfigSubscribers(Service)`
@@ -44,15 +44,11 @@ import (
 	"context"
 	"fmt"
 	"log"
-
 	"google.golang.org/grpc"
-
 	pb "distributed-cfg-service-mk/proto"
 )
 
 func main() {
-
-	// Some simple testing here:
 
 	conn, err := grpc.Dial("localhost:50051", grpc.WithInsecure())
 	if err != nil {
@@ -61,7 +57,7 @@ func main() {
 	defer conn.Close()
 	c := pb.NewDistributedCfgServiceMKClient(conn)
 
-	service := "Test service 1"
+	service := "Service number one"
 
 	params := []*pb.Parameter{
 		{Key: "Tcp port", Value: "80"},
@@ -103,9 +99,9 @@ func main() {
 Хранилище реализовано на БД PostgreSQL, через ORM-прослойку gorm.
 Версионирование конфига реализовано посредством поля `updated_at` с соотв таймстемпом в записях в таблицах БД.
 
-## Что не успел(увы, времени не хватило) реализовать
+## Что не успел (увы, времени не хватило) реализовать
 
 * Самое главное - конечно же адекватное тестирование, будь то полноценные юнит тесты или хотя бы просто сравнение по набору got/want. То что сейчас есть, это просто несерьезно.
 * Лаконичная организация кода по файлам/функциям/методам.
 * Абстракция работы с хранилищем.
-* Скорее всего имеются баги, тесты не успел, ну и вот...
+* Совершенно точно имеются баги, тесты не успел, ну и вот...
