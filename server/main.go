@@ -226,25 +226,23 @@ func (srv *GrpcDistributedConfigServer) GetConfig(ctx context.Context, requested
 
 // GetArchivedConfig() gRPC handler
 func (srv *GrpcDistributedConfigServer) GetArchivedConfig(ctx context.Context, requestedVersion *pb.Timestamp) (*pb.ConfigByTimestamp, error) {
-	config := &Config{}
 	configToSendBack := &pb.ConfigByTimestamp{}
 	var paramsGrpc []*pb.Parameter
 
 	// Check if config with NAME provided by client exists in DB:
-	result := srv.db.Limit(1).Where("service = ?", requestedVersion.Service).Find(&config)
+	result := srv.db.Limit(1).Where("service = ?", requestedVersion.Service).Find(&Config{})
 	if !(result.RowsAffected > 0) {
 		return nil, status.Errorf(codes.NotFound,
 			"No config for service \"%s\" found, use CreateConfig() to create it from scratch", requestedVersion.Service)
 	}
 
-	// !!!!!! FOR SOME REASON NOT WORKING, NEEDS DEBUGGING, PROBABLY SMTH WITH TIMEZONES !!!!!
 	// Check if config with NAME AND TIMESTAMP provided by client exists in DB:
-	// result = srv.db.Limit(1).Where("service = ? AND updated_at = ?", requestedVersion.Service, requestedVersion.Timestamp.AsTime()).Find(&config)
-	// if !(result.RowsAffected > 0) {
-	// 	return nil, status.Errorf(codes.NotFound,
-	// 		"Config for service \"%s\" exists, but no version with provided timestamp \"%s\" found. Use ListConfigTimestamps() to list available timestamps.",
-	// 		requestedVersion.Service, requestedVersion.Timestamp.AsTime().String())
-	// }
+	result = srv.db.Limit(1).Where("service = ? AND updated_at = ?", requestedVersion.Service, requestedVersion.Timestamp.AsTime()).Find(&Config{})
+	if !(result.RowsAffected > 0) {
+		return nil, status.Errorf(codes.NotFound,
+			"Config for service \"%s\" exists, but no version with provided timestamp \"%s\" found. Use ListConfigTimestamps() to list available timestamps.",
+			requestedVersion.Service, requestedVersion.Timestamp.AsTime().String())
+	}
 
 	srv.db.Raw(SqlGetKeyValsByTimestamp, requestedVersion.Service, requestedVersion.Timestamp.AsTime()).Scan(&paramsGrpc)
 	configToSendBack.Service = requestedVersion.Service
